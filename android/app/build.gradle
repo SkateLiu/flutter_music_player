@@ -1,0 +1,99 @@
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+android {
+    compileSdkVersion 30
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+
+    signingConfigs {
+        config {
+            keyAlias 'key_music'
+            keyPassword 'pwd123456'
+            storeFile file('./keystore.jks')
+            storePassword 'pwd123456'
+        }
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId "xwh.flutter.music"
+        minSdkVersion 16
+        targetSdkVersion 30
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // 选择打包时选取的so文件，x86时模拟上的环境。尽量只选需要的，不然安装包会太大
+        ndk {
+            abiFilters "arm64-v8a" ,"armeabi-v7a"//,"x86_64","x86"
+        }
+    }
+
+    buildTypes {
+        release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig signingConfigs.config
+        }
+        debug {
+            signingConfig signingConfigs.config
+        }
+    }
+
+    // 插件和app都依赖了libflutter.so文件，这里指定一下
+    // 如果编译失败，修改这里！！！！
+    packagingOptions {
+        pickFirst 'lib/x86_64/libflutter.so'
+        pickFirst 'lib/x86/libflutter.so'
+        pickFirst 'lib/arm64-v8a/libflutter.so'
+        pickFirst 'lib/armeabi-v7a/libflutter.so'
+        pickFirst 'lib/arm64-v8a/libapp.so'
+        exclude 'lib/armeabi-v7a/libapp.so'
+        exclude 'lib/arm64-v8a/libapp.so'
+        exclude 'lib/x86_64/libapp.so'
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test:runner:1.1.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0'
+
+    implementation project(':speech')
+}

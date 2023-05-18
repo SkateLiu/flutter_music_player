@@ -1,0 +1,153 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_music_player/widget/my_video_player.dart';
+import 'package:orientation/orientation.dart';
+import 'package:video_player/video_player.dart';
+
+class FullScreenVideoPlayer extends StatefulWidget {
+  final VideoPlayerController controller;
+  final Map mv;
+  FullScreenVideoPlayer(this.controller, {Key key, this.mv}) : super(key: key);
+
+  @override
+  _FullScreenVideoPlayerState createState() => _FullScreenVideoPlayerState();
+}
+
+class _FullScreenVideoPlayerState extends State<FullScreenVideoPlayer> {
+  VideoPlayerController _controller;
+  VideoState _playerState = VideoState.playing;
+  bool showButtons = true;
+  bool isFullScreen = false;
+  WidgetsBindingObserver widgetsBindingObserver;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = widget.controller;
+
+    //AutoOrientation.landscapeLeftMode();
+
+    //OrientationPlugin.forceOrientation(DeviceOrientation.landscapeRight);
+
+    //_playerState = widget.playerState;
+
+    //SystemChrome.setPreferredOrientations(
+    //[DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+
+    //print('initState ${widget.mv["name"]}, controller: ${_controller==null ?'null':_controller.hashCode}');
+
+    print('FullScreen initState');
+
+    // 延时1s执行返回
+    Future.delayed(Duration(seconds: 1), () {
+      print('延时1s执行');
+      _switchScreen(true);
+    });
+
+    /*  WidgetsBinding.instance.addPostFrameCallback((callback){
+    print("addPostFrameCallback be invoke");
+    isFullScreen = true;
+    OrientationPlugin.forceOrientation(DeviceOrientation.landscapeRight);
+  }); */
+
+    WidgetsBinding.instance.addObserver(widgetsBindingObserver);
+  }
+
+  @override
+  void deactivate() {
+    super.deactivate();
+
+    print('FullScreen deactivate');
+  }
+
+  @override
+  void didUpdateWidget(FullScreenVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print('FullScreen didUpdateWidget');
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+
+    print('FullScreen dispose');
+    WidgetsBinding.instance.removeObserver(widgetsBindingObserver);
+  }
+
+  Future<bool> _beforePop() {
+    if (!isFullScreen) {
+      return Future.value(true);
+    }
+
+    _switchScreen(false).then((_){
+      /* Future.delayed(Duration(seconds: 1)).then((_){
+        Navigator.pop(context);
+      }); */
+    });
+
+    // 返回false，不关闭，走上面的异步操作。
+    return Future.value(false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('FullScreen build');
+
+    return WillPopScope(
+        onWillPop: _beforePop,
+        child: Material(
+            color: Colors.black,
+            child: Stack(
+              children: <Widget>[
+                Center(
+                    child: AspectRatio(
+                        aspectRatio: _controller.value.aspectRatio,
+                        child: MyVideoPlayer(
+                          mv: widget.mv,
+                          controller: _controller,
+                          playerState: this._playerState,
+                          onResizePressed: (controller) {
+                            _switchScreen(!isFullScreen);
+                          },
+                          onShowButtons: (showButtons) {
+                            setState(() {
+                              this.showButtons = showButtons;
+                            });
+                          },
+                          isFullScreen: isFullScreen,
+                        ))),
+                this.showButtons
+                    ? SafeArea(
+                        child: IconButton(
+                        icon: Icon(Icons.arrow_back),
+                        color: Colors.white,
+                        iconSize: 28.0,
+                        padding: EdgeInsets.all(12.0),
+                        onPressed: () {
+                          if (isFullScreen) {
+                            _switchScreen(false);
+                          } else {
+                            Navigator.pop(context);
+                          }
+                        },
+                      ))
+                    : Container()
+              ],
+            )));
+  }
+
+  Future<void> _switchScreen(bool fullScreen) async {
+    print('_switchScreen: $fullScreen');
+    this.isFullScreen = fullScreen;
+    return OrientationPlugin.forceOrientation(isFullScreen
+            ? DeviceOrientation.landscapeRight
+            : DeviceOrientation.portraitUp)
+        .then((_) {
+      // 全屏时隐藏默认的状态栏，返回时恢复
+      SystemChrome.setEnabledSystemUIOverlays(
+          this.isFullScreen ? [] : SystemUiOverlay.values);
+
+      setState(() {});
+    });
+  }
+}
